@@ -2,44 +2,15 @@ package engine
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-
-	yaml "gopkg.in/yaml.v2"
+	"io"
 
 	"github.com/ppmp/protocol"
 )
 
 // Controller ...
 type Controller struct {
-	Pipeline *protocol.Pipeline
-}
-
-// ParseFile ...
-func ParseFile(f *os.File) (*Controller, error) {
-	pipeline := new(protocol.Pipeline)
-	b, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-	ext := filepath.Ext(f.Name())
-	if err := getUnmarshalFunc(ext)(b, pipeline); err != nil {
-		return nil, err
-	}
-	return New(pipeline), nil
-}
-
-// getUnmarshalFunc ...
-func getUnmarshalFunc(ext string) func(b []byte, v interface{}) error {
-	switch ext {
-	case "json":
-		return json.Unmarshal
-	case "yaml", "yml":
-		return yaml.Unmarshal
-	default:
-		return yaml.Unmarshal
-	}
+	Pipeline *protocol.Pipeline `json:"pipeline" yaml:"pipeline"`
+	Dryrun   bool               `json:"dryrun"   yaml:"dryrun"`
 }
 
 // New ...
@@ -50,6 +21,20 @@ func New(pipeline *protocol.Pipeline) *Controller {
 }
 
 // Handle ...
-func Handle() error {
+func (c *Controller) Handle(dry bool) error {
+	c.Dryrun = dry
+
+	if c.Pipeline.Steps == nil && c.Pipeline.Job != nil {
+		c.Pipeline.Steps = append(c.Pipeline.Steps, c.Pipeline.Job)
+		c.Pipeline.Job = nil
+	}
+
 	return nil
+}
+
+// Inspect ...
+func (c *Controller) Inspect(w io.Writer) error {
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "\t")
+	return encoder.Encode(c)
 }
