@@ -8,7 +8,7 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/otiai10/manolin/protocol"
+	"github.com/ppmp/protocol"
 )
 
 // Controller ...
