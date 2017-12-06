@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/cascade/protocol"
@@ -82,9 +83,9 @@ func (d *Driver) execute(component *protocol.Component, param *protocol.Paramete
 	if component.Execute == nil {
 		return fmt.Errorf("`execute` fields cannot be empty")
 	}
-	executer := d.getExecuter(component)
-	if executer == nil {
-		return fmt.Errorf("either of `inline`, `script` or `container` must be specified in `execute` clause")
+	executer, err := d.getExecuter(component)
+	if err != nil {
+		return err
 	}
 	if err := executer.Prepare(component.Inputs, param); err != nil {
 		return err
@@ -99,15 +100,22 @@ func (d *Driver) execute(component *protocol.Component, param *protocol.Paramete
 }
 
 // getExecuter ...
-func (d *Driver) getExecuter(component *protocol.Component) Executer {
+func (d *Driver) getExecuter(component *protocol.Component) (Executer, error) {
 	execute := component.Execute
 	switch {
 	case execute.Inline != nil:
-		return &InlineShellExecuter{}
+		return &InlineShellExecuter{}, nil
 	case execute.Script != nil:
-		return &ScriptExecuter{}
+		scriptpath, err := filepath.Abs(*execute.Script)
+		if err != nil {
+			return nil, err
+		}
+		return &ScriptExecuter{
+			ScriptPath: scriptpath,
+			WorkDir:    d.WorkDir,
+		}, nil
 	case execute.Container != nil:
-		return &ContainerExecuter{}
+		return &ContainerExecuter{}, nil
 	}
-	return nil
+	return nil, fmt.Errorf("either of `inline`, `script` or `container` must be specified in `execute` clause")
 }
