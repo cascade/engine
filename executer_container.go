@@ -8,7 +8,7 @@ type ContainerExecuter struct {
 }
 
 // Prepare ...
-func (ex *ContainerExecuter) Prepare(inputs *protocol.Inputs, params *protocol.Parameters) error {
+func (ex *ContainerExecuter) Prepare(inputs protocol.Inputs, params *protocol.Parameters) error {
 	return nil
 }
 
@@ -18,6 +18,6 @@ func (ex *ContainerExecuter) Execute() error {
 }
 
 // Finalize ...
-func (ex *ContainerExecuter) Finalize(outputs *protocol.Outputs) error {
+func (ex *ContainerExecuter) Finalize(outputs protocol.Outputs) error {
 	return nil
 }

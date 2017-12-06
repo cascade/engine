@@ -8,7 +8,7 @@ type InlineShellExecuter struct {
 }
 
 // Prepare ...
-func (ex *InlineShellExecuter) Prepare(inputs *protocol.Inputs, params *protocol.Parameters) error {
+func (ex *InlineShellExecuter) Prepare(inputs protocol.Inputs, params *protocol.Parameters) error {
 	return nil
 }
 
@@ -18,6 +18,6 @@ func (ex *InlineShellExecuter) Execute() error {
 }
 
 // Finalize ...
-func (ex *InlineShellExecuter) Finalize(outputs *protocol.Outputs) error {
+func (ex *InlineShellExecuter) Finalize(outputs protocol.Outputs) error {
 	return nil
 }
