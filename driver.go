@@ -3,8 +3,6 @@ package engine
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"sync"
 
 	"github.com/cascade/protocol"
@@ -81,50 +79,35 @@ func (d *Driver) parallel(component *protocol.Component, param *protocol.Paramet
 
 // execute handles Execute
 func (d *Driver) execute(component *protocol.Component, param *protocol.Parameters) error {
-	execute := component.Execute
-	if execute == nil {
+	if component.Execute == nil {
 		return fmt.Errorf("`execute` fields cannot be empty")
 	}
-	switch {
-	case execute.Inline != nil:
-		return d.executeInlineShell(component, param)
-	case execute.Script != nil:
-		return d.executeScript(component, param)
-	case execute.Container != nil:
-		return d.executeContainer(component, param)
+	executer := d.getExecuter(component)
+	if executer == nil {
+		return fmt.Errorf("either of `inline`, `script` or `container` must be specified in `execute` clause")
 	}
-	return fmt.Errorf("either of `inline`, `script` or `container` must be specified in `execute` clause")
-}
-
-func (d *Driver) executeInlineShell(component *protocol.Component, param *protocol.Parameters) error {
-	// FIXME: Only bash?
-	cmd := exec.Command("bash", "-c", *component.Execute.Inline)
-	cmd.Dir = d.WorkDir
-	out, err := cmd.Output()
-	// FIXME: hard coding
-	fmt.Println("DEBUG:", string(out))
-	return err
-}
-
-// executeCommandLine ...
-func (d *Driver) executeScript(component *protocol.Component, param *protocol.Parameters) error {
-	if component.Runtime == nil {
-		scriptpath, err := filepath.Abs(*component.Execute.Script)
-		if err != nil {
-			return err
-		}
-		component.Execute.Script = &scriptpath
-		cmd := exec.Command(*component.Execute.Script)
-		cmd.Dir = d.WorkDir
-		out, err := cmd.Output()
-		// FIXME: hard coding
-		fmt.Println("DEBUG:", string(out))
+	if err := executer.Prepare(component.Inputs, param); err != nil {
 		return err
 	}
-	// Create a machine with specified runtime, and execute the script to that container.
+	if err := executer.Execute(); err != nil {
+		return err
+	}
+	if err := executer.Finalize(component.Outputs); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (d *Driver) executeContainer(component *protocol.Component, param *protocol.Parameters) error {
+// getExecuter ...
+func (d *Driver) getExecuter(component *protocol.Component) Executer {
+	execute := component.Execute
+	switch {
+	case execute.Inline != nil:
+		return &InlineShellExecuter{}
+	case execute.Script != nil:
+		return &ScriptExecuter{}
+	case execute.Container != nil:
+		return &ContainerExecuter{}
+	}
 	return nil
 }
